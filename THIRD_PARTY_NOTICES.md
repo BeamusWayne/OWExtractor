@@ -20,3 +20,9 @@ OWExtractor 是独立开发的客户端，通过命令行调用用户自行准�
 ## 游戏内容
 
 游戏资源不属于本项目软件许可证的授权范围。仓库及便携包不包含提取的游戏模型、贴图或音频。文档界面截图展示的是客户端与本地资源条目信息。
+
+## unslop 设计方法参考
+
+本项目 v0.1.1 的界面审视与改进过程参考 [unslop](https://github.com/heydamir/unslop)，作者为 [Damir Sokolovsky / @heydamir](https://x.com/heydamir)。其技能及参考文档采用 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 许可证。
+
+本项目根据桌面资源工具的用途适配了间距、视觉层级、文案、状态反馈与选择标记。WPF 界面代码为独立实现，没有复制其示例前端代码、参考图片或技能文件。

@@ -1,39 +1,332 @@
-<Window x:Class="OWExtractor.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="OWExtractor · 守望先锋资源提取" Width="1360" Height="960" MinWidth="1100" MinHeight="820" Background="#F3F5F8" WindowStartupLocation="CenterScreen" Style="{StaticResource {x:Type Window}}">
-  <Grid Margin="24">
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="220"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <Grid Margin="0,0,0,16">
-      <StackPanel Orientation="Horizontal"><Border Width="42" Height="42" Background="#E87722" CornerRadius="9" Margin="0,0,12,0"><TextBlock Text="OW" Foreground="White" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel><TextBlock Text="OWExtractor" FontSize="26" FontWeight="Bold"/><TextBlock Text="守望先锋资源提取 · 中文桌面客户端" Foreground="{StaticResource Muted}"/></StackPanel></StackPanel>
-      <TextBlock Text="v0.1.0 · 开发预览" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+<Window x:Class="OWExtractor.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="OWExtractor · 守望先锋资源工作台"
+        Width="1360" Height="900" MinWidth="1080" MinHeight="720"
+        Background="{StaticResource Surface}" WindowStartupLocation="CenterScreen"
+        Style="{StaticResource {x:Type Window}}">
+  <Window.InputBindings>
+    <KeyBinding Key="F" Modifiers="Control" Command="ApplicationCommands.Find"/>
+    <KeyBinding Key="O" Modifiers="Control" Command="ApplicationCommands.Open"/>
+  </Window.InputBindings>
+  <Window.CommandBindings>
+    <CommandBinding Command="ApplicationCommands.Find" Executed="FindSkin"/>
+    <CommandBinding Command="ApplicationCommands.Open" Executed="ImportExports"/>
+  </Window.CommandBindings>
+  <Grid Margin="24,16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="56"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="8"/>
+      <RowDefinition Height="{Binding QueueHeight}" MinHeight="144"/>
+      <RowDefinition Height="28"/>
+    </Grid.RowDefinitions>
+
+    <Grid>
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Border Width="4" Height="24" Background="{StaticResource Signal}" Margin="0,0,12,0"/>
+        <TextBlock Text="OWExtractor" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <Border Width="1" Height="20" Background="{StaticResource Hairline}" Margin="20,0"/>
+        <TextBlock Text="守望先锋资源工作台" Foreground="{StaticResource Secondary}" VerticalAlignment="Center"/>
+      </StackPanel>
+      <TextBlock Text="开发预览 0.1.1" Style="{StaticResource Meta}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
     </Grid>
-    <Border Grid.Row="1" Background="#FFF3E3" BorderBrush="#F1D6AE" BorderThickness="1" CornerRadius="7" Padding="14,11" Margin="0,0,0,14">
-      <DockPanel><TextBlock Text="{Binding ModeText}" FontWeight="SemiBold" VerticalAlignment="Center"/><CheckBox Content="允许读取已退出的游戏" IsChecked="{Binding LiveEnabled}" IsEnabled="{Binding CanEdit}" HorizontalAlignment="Right" ToolTip="本次启动默认关闭。游戏运行时仍会阻止 DataTool 启动。"/></DockPanel>
+
+    <Border Grid.Row="1" BorderBrush="{StaticResource Hairline}" BorderThickness="0,1" Padding="0,12">
+      <DockPanel>
+        <TextBlock Text="{Binding ModeLabel}" DockPanel.Dock="Left" FontWeight="Medium" Margin="0,0,16,0"/>
+        <TextBlock Text="{Binding ModeText}" Foreground="{StaticResource Secondary}"/>
+      </DockPanel>
     </Border>
-    <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="16" Margin="0,0,0,14">
-      <Grid IsEnabled="{Binding CanEdit}">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-        <Grid Margin="0,0,18,10"><Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="提取引擎" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding Settings.EnginePath,UpdateSourceTrigger=PropertyChanged}" ToolTip="DataTool.exe 路径；设置路径不会启动引擎"/><Button Grid.Column="2" Content="选择" Click="ChooseEngine" Margin="8,0,0,0"/></Grid>
-        <Grid Grid.Column="1" Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="游戏目录" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding Settings.GamePath,UpdateSourceTrigger=PropertyChanged}"/><Button Grid.Column="2" Content="选择" Click="ChooseGame" Margin="8,0,0,0"/></Grid>
-        <Grid Grid.Row="1" Margin="0,0,18,0"><Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="导出目录" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding Settings.OutputPath,UpdateSourceTrigger=PropertyChanged}"/><Button Grid.Column="2" Content="选择" Click="ChooseOutput" Margin="8,0,0,0"/></Grid>
-        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="资源语言" Width="72" VerticalAlignment="Center"/><ComboBox Width="100" SelectedValue="{Binding Settings.Language}" SelectedValuePath="Content" VerticalContentAlignment="Center"><ComboBoxItem Content="enUS"/><ComboBoxItem Content="zhCN"/><ComboBoxItem Content="zhTW"/></ComboBox><Button Content="保存设置" Click="SaveSettings" Margin="12,0,8,0"/><Button Content="从游戏刷新目录" Click="RefreshLive" IsEnabled="{Binding CanRun}" ToolTip="会读取游戏文件；离线模式或游戏运行时不可执行"/></StackPanel>
+
+    <Expander x:Name="SettingsExpander" Grid.Row="2" Margin="0,4,0,12" IsExpanded="False"
+              AutomationProperties.Name="路径与提取设置">
+      <Expander.Header>
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="路径与提取设置" Foreground="{StaticResource Secondary}" Margin="0,0,16,0"/>
+          <TextBlock Text="导出位置 · DataTool · 资源语言" Style="{StaticResource Meta}"/>
+        </StackPanel>
+      </Expander.Header>
+    </Expander>
+
+    <Border x:Name="LibraryArea" Grid.Row="3" Background="White" BorderBrush="{StaticResource Hairline}" BorderThickness="1" CornerRadius="8">
+      <Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding IsExpanded,ElementName=SettingsExpander}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger></Style.Triggers></Style></Border.Style>
+      <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="240"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <Border BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,1,0" Padding="16">
+          <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+              <TextBlock Text="英雄" FontSize="15" FontWeight="Medium"/>
+              <TextBlock Text="{Binding HeroCountText}" Style="{StaticResource Figure}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+            <TextBox x:Name="HeroSearchBox" DockPanel.Dock="Top" Text="{Binding HeroSearch,UpdateSourceTrigger=PropertyChanged}"
+                     Tag="搜索英雄" Margin="0,0,0,12" AutomationProperties.AutomationId="HeroSearch"/>
+            <Grid>
+              <ListBox ItemsSource="{Binding Heroes}" SelectedItem="{Binding SelectedHero}" ItemContainerStyle="{StaticResource ResourceRow}"
+                       AutomationProperties.Name="英雄列表">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="40"/></Grid.ColumnDefinitions>
+                      <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Role}" Style="{StaticResource Meta}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasHeroes}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                <TextBlock Text="{Binding EmptyHeroTitle}" Foreground="{StaticResource Secondary}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <Button Content="清除搜索" Style="{StaticResource QuietButton}" Click="ClearHeroSearch" Visibility="{Binding HasHeroSearch,Converter={StaticResource VisibleWhenTrue}}"/>
+              </StackPanel>
+            </Grid>
+          </DockPanel>
+        </Border>
+
+        <Grid Grid.Column="1" Margin="24,16">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="16"/><RowDefinition Height="Auto"/><RowDefinition Height="16"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <Grid>
+            <StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding HeroName}" FontSize="26" FontWeight="Medium" Margin="0,0,12,0"/>
+                <TextBlock Text="{Binding HeroOriginalName}" FontSize="14" Foreground="{StaticResource Muted}" VerticalAlignment="Bottom" Margin="0,0,0,4"/>
+              </StackPanel>
+              <TextBlock Text="{Binding HeroResourceSummary}" Style="{StaticResource Meta}" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" IsEnabled="{Binding CanEdit}">
+              <Button Content="导入已有结果" Click="ImportExports" ToolTip="选择之前导出的 Heroes 目录；Ctrl+O"/>
+              <Button Content="导入列表" Click="OpenImportMenu" Margin="8,0,0,0">
+                <Button.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="英雄列表（JSON）" Click="ImportHeroes"/>
+                    <MenuItem Header="皮肤目录（JSON）" Click="ImportUnlocks"/>
+                    <Separator/>
+                    <MenuItem Header="合并中文英雄名称（JSON）" Click="ImportLocalized"/>
+                  </ContextMenu>
+                </Button.ContextMenu>
+              </Button>
+            </StackPanel>
+          </Grid>
+
+          <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBox x:Name="SkinSearchBox" Text="{Binding SkinSearch,UpdateSourceTrigger=PropertyChanged}"
+                     Tag="搜索皮肤" AutomationProperties.AutomationId="SkinSearch"/>
+            <CheckBox Grid.Column="1" Content="仅已有结果" IsChecked="{Binding ExistingOnly}" Margin="16,0,0,0"/>
+          </Grid>
+
+          <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="{Binding InspectorGap}"/><ColumnDefinition Width="{Binding InspectorWidth}"/></Grid.ColumnDefinitions>
+            <DockPanel>
+              <Border DockPanel.Dock="Top" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="12,0,12,12">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="84"/><ColumnDefinition Width="56"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="皮肤" Style="{StaticResource Meta}"/>
+                  <TextBlock Grid.Column="1" Text="来源" Style="{StaticResource Meta}"/>
+                  <TextBlock Grid.Column="2" Text="模型" Style="{StaticResource Meta}" HorizontalAlignment="Right"/>
+                </Grid>
+              </Border>
+              <Grid>
+                <ListBox x:Name="SkinGrid" ItemsSource="{Binding VisibleSkins}" SelectedItem="{Binding SelectedSkin}"
+                         SelectionMode="Extended" SelectionChanged="SkinSelectionChanged" ItemContainerStyle="{StaticResource SkinRow}"
+                         AutomationProperties.Name="皮肤列表">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="84"/><ColumnDefinition Width="56"/></Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                          <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding LocalFileSummary}" Style="{StaticResource Meta}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding State}" Foreground="{StaticResource Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding ModelCount,StringFormat={}{0:N0}}" Style="{StaticResource Figure}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16">
+                  <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSkins}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                  <TextBlock Text="{Binding EmptySkinTitle}" FontSize="16" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                  <TextBlock Text="{Binding EmptySkinDescription}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,16" MaxWidth="280" Visibility="{Binding ShowInspector,Converter={StaticResource VisibleWhenTrue}}"/>
+                  <Button Content="清除筛选" Click="ClearSkinFilter" HorizontalAlignment="Center">
+                    <Button.Style><Style TargetType="Button" BasedOn="{StaticResource QuietButton}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSkinFilter}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </DockPanel>
+
+            <Border Grid.Column="2" Background="#F7F8F9" CornerRadius="6" Padding="16" Visibility="{Binding ShowInspector,Converter={StaticResource VisibleWhenTrue}}">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Bottom" Visibility="{Binding HasSelectedSkin,Converter={StaticResource VisibleWhenTrue}}" Margin="0,12,0,0">
+                  <Button Content="打开文件夹" Click="OpenExport" IsEnabled="{Binding CanOpenExport}"/>
+                  <Button Content="查看提取命令" Style="{StaticResource QuietButton}" Click="PreviewCommand" IsEnabled="{Binding CanPreview}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid>
+                <StackPanel Visibility="{Binding HasSelectedSkin,Converter={StaticResource VisibleWhenTrue}}">
+                  <TextBlock Text="所选资源" Style="{StaticResource Meta}" Margin="0,0,0,12"/>
+                  <TextBlock Text="{Binding SelectedSkin.Name}" FontSize="20" FontWeight="Medium" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding SelectedSkin.State}" Foreground="{StaticResource Secondary}" Margin="0,8,0,16"/>
+                  <StackPanel Visibility="{Binding CanOpenExport,Converter={StaticResource VisibleWhenTrue}}">
+                    <Grid Margin="0,0,0,8"><TextBlock Text="模型文件" Foreground="{StaticResource Secondary}"/><TextBlock Text="{Binding SelectedSkin.ModelCount,StringFormat={}{0:N0}}" Style="{StaticResource Figure}" HorizontalAlignment="Right"/></Grid>
+                    <Grid Margin="0,0,0,8"><TextBlock Text="全部文件" Foreground="{StaticResource Secondary}"/><TextBlock Text="{Binding SelectedSkin.FileCount,StringFormat={}{0:N0}}" Style="{StaticResource Figure}" HorizontalAlignment="Right"/></Grid>
+                    <Grid Margin="0,0,0,16"><TextBlock Text="文件大小" Foreground="{StaticResource Secondary}"/><TextBlock Text="{Binding SelectedSkin.SizeLabel}" Style="{StaticResource Figure}" HorizontalAlignment="Right"/></Grid>
+                    <TextBlock Text="本地位置" Style="{StaticResource Meta}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{Binding SelectedSkin.ExportDirectory}" FontSize="12" Foreground="{StaticResource Secondary}" TextWrapping="Wrap" MaxHeight="48" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedSkin.ExportDirectory}"/>
+                    <Button Content="复制路径" Style="{StaticResource QuietButton}" Click="CopyExportPath" IsEnabled="{Binding CanOpenExport}" HorizontalAlignment="Left"/>
+                  </StackPanel>
+                </StackPanel>
+                <TextBlock Text="选择皮肤以查看文件信息" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Meta}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasSelectedSkin}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                </TextBlock>
+                </Grid>
+                </ScrollViewer>
+              </DockPanel>
+            </Border>
+          </Grid>
+
+          <Border Grid.Row="5" BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,12,0,0">
+            <DockPanel>
+              <Button x:Name="AddQueueButton" DockPanel.Dock="Right" Content="加入队列" Style="{StaticResource Primary}" Click="AddJobs"
+                      IsEnabled="{Binding CanAdd}" ToolTipService.ShowOnDisabled="True" ToolTip="选择皮肤后加入队列；离线模式不执行提取"/>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding SelectionSummary}" Foreground="{StaticResource Secondary}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button Content="全选" Style="{StaticResource QuietButton}" Click="SelectAll" IsEnabled="{Binding CanSelectAll}"/>
+                <Button Content="清空选择" Style="{StaticResource QuietButton}" Click="ClearSelection" IsEnabled="{Binding CanSelectAll}"/>
+                <Button Content="打开结果" Style="{StaticResource QuietButton}" Click="OpenExport" IsEnabled="{Binding CanOpenExport}"/>
+                <Button Content="更多" Style="{StaticResource QuietButton}" Click="OpenImportMenu" IsEnabled="{Binding CanPreview}">
+                  <Button.ContextMenu><ContextMenu><MenuItem Header="查看提取命令" Click="PreviewCommand"/><MenuItem Header="复制资源路径" Click="CopyExportPath" IsEnabled="{Binding CanOpenExport}"/></ContextMenu></Button.ContextMenu>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+        </Grid>
       </Grid>
     </Border>
-    <Grid Grid.Row="3" Margin="0,0,0,14">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="238"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-      <Border Background="White" CornerRadius="8" Padding="14"><DockPanel><StackPanel DockPanel.Dock="Top"><TextBlock Text="英雄目录" FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/><TextBox Text="{Binding HeroSearch,UpdateSourceTrigger=PropertyChanged}" ToolTip="搜索中文或原始名称" Margin="0,0,0,10"/></StackPanel><ListBox ItemsSource="{Binding Heroes}" SelectedItem="{Binding SelectedHero}" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListBox.ItemTemplate><DataTemplate><StackPanel Margin="5,7"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15"/><TextBlock Text="{Binding Summary}" Foreground="#758298" FontSize="11" Margin="0,3,0,0"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox></DockPanel></Border>
-      <Border Grid.Column="2" Background="White" CornerRadius="8" Padding="16"><DockPanel>
-        <StackPanel DockPanel.Dock="Top"><TextBlock Text="{Binding HeroTitle}" FontSize="20" FontWeight="Bold"/><TextBlock Text="{Binding CatalogSummary}" Foreground="{StaticResource Muted}" Margin="0,5,0,12"/>
-          <WrapPanel IsEnabled="{Binding CanEdit}" Margin="0,0,0,10"><Button Content="导入英雄 JSON" Click="ImportHeroes"/><Button Content="合并中文名称" Click="ImportLocalized"/><Button Content="导入皮肤 JSON" Click="ImportUnlocks"/><Button Content="导入既有导出目录" Click="ImportExports"/></WrapPanel>
-          <DockPanel Margin="0,0,0,10"><Button DockPanel.Dock="Right" Content="加入提取队列" Style="{StaticResource Primary}" Click="AddJobs" IsEnabled="{Binding CanEdit}" Margin="8,0,0,0"/><Button DockPanel.Dock="Right" Content="全选" Click="SelectAll" Margin="8,0,0,0"/><TextBox Text="{Binding SkinSearch,UpdateSourceTrigger=PropertyChanged}" ToolTip="搜索皮肤名称"/></DockPanel>
-        </StackPanel>
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,10,0,0"><Button Content="打开已有结果" Click="OpenExport"/><Button Content="查看提取命令" Click="PreviewCommand"/><TextBlock Text="Ctrl / Shift 可多选" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0"/></StackPanel>
-        <DataGrid x:Name="SkinGrid" ItemsSource="{Binding VisibleSkins}" SelectionMode="Extended" SelectionUnit="FullRow"><DataGrid.Columns><DataGridTextColumn Header="皮肤" Binding="{Binding Name}" Width="230"/><DataGridTextColumn Header="来源" Binding="{Binding State}" Width="110"/><DataGridTextColumn Header="本地文件" Binding="{Binding Details}" Width="430"/></DataGrid.Columns></DataGrid>
-      </DockPanel></Border>
-    </Grid>
-    <Border Grid.Row="4" Background="White" CornerRadius="8" Padding="14"><DockPanel>
-      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10"><TextBlock Text="提取任务" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/><Button Content="开始队列" Style="{StaticResource Primary}" Click="RunJobs" IsEnabled="{Binding CanRun}"/><Button Content="取消执行" Click="CancelJobs" IsEnabled="{Binding Busy}"/><Button Content="重试选中" Click="RetryJob" IsEnabled="{Binding CanEdit}"/><Button Content="移除选中" Click="RemoveJob" IsEnabled="{Binding CanEdit}"/><Button Content="打开任务目录" Click="OpenJob"/></StackPanel>
-      <TabControl BorderThickness="0"><TabItem Header="任务队列"><DataGrid x:Name="JobGrid" ItemsSource="{Binding Jobs}" SelectionMode="Single"><DataGrid.Columns><DataGridTextColumn Header="英雄 / 皮肤" Binding="{Binding Title}" Width="240"/><DataGridTextColumn Header="状态" Binding="{Binding StatusText}" Width="100"/><DataGridTextColumn Header="说明" Binding="{Binding Message}" Width="800"/></DataGrid.Columns></DataGrid></TabItem><TabItem Header="运行日志"><TextBox Text="{Binding Log,Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" FontFamily="Consolas, Microsoft YaHei UI" FontSize="12" BorderThickness="0"/></TabItem></TabControl>
-    </DockPanel></Border>
-    <TextBlock Grid.Row="5" Text="{Binding Status}" Foreground="{StaticResource Muted}" Margin="2,12,0,0" TextTrimming="CharacterEllipsis"/>
+
+    <GridSplitter Grid.Row="4" Height="4" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="Transparent" ShowsPreview="True" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="调整资源区和任务区高度"/>
+
+    <Border x:Name="QueueArea" Grid.Row="5" Background="White" BorderBrush="{StaticResource Hairline}" BorderThickness="1" CornerRadius="8" Padding="20,12">
+      <Border.Style><Style TargetType="Border"><Style.Triggers><DataTrigger Binding="{Binding IsExpanded,ElementName=SettingsExpander}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger></Style.Triggers></Style></Border.Style>
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="提取队列" FontSize="16" FontWeight="Medium" Margin="0,0,16,0"/>
+            <TextBlock Text="{Binding QueueSummary}" Style="{StaticResource Meta}" VerticalAlignment="Center"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="任务操作" Style="{StaticResource QuietButton}" Click="OpenImportMenu" IsEnabled="{Binding CanManageJob}" Margin="0,0,8,0" MinHeight="32" ToolTipService.ShowOnDisabled="True" ToolTip="先选择一项任务">
+              <Button.ContextMenu><ContextMenu DataContext="{Binding PlacementTarget.DataContext,RelativeSource={RelativeSource Self}}"><MenuItem Header="打开输出目录" Click="OpenJob" IsEnabled="{Binding CanOpenJob}"/><MenuItem Header="重新加入队列" Click="RetryJob" IsEnabled="{Binding CanRetry}"/><MenuItem Header="移除任务" Click="RemoveJob" IsEnabled="{Binding CanRemove}"/></ContextMenu></Button.ContextMenu>
+            </Button>
+            <Button Content="取消提取" Style="{StaticResource QuietButton}" Click="CancelJobs" IsEnabled="{Binding CanCancel}" Margin="0,0,8,0" MinHeight="32"/>
+            <Button x:Name="RunQueueButton" Content="开始提取" Style="{StaticResource RunButton}" Click="RunJobs" IsEnabled="{Binding CanRun}" MinHeight="32"
+                    ToolTipService.ShowOnDisabled="True" ToolTip="需要待执行任务，并在设置中允许读取已退出的游戏"/>
+          </StackPanel>
+        </Grid>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding QueueHint}" Style="{StaticResource Meta}" Margin="0,8,0,0" Visibility="{Binding ShowInspector,Converter={StaticResource VisibleWhenTrue}}"/>
+        <TabControl>
+          <TabItem Header="任务">
+            <DockPanel>
+              <Grid>
+                <ListBox x:Name="JobGrid" ItemsSource="{Binding Jobs}" SelectedItem="{Binding SelectedJob}" SelectionMode="Single"
+                         ItemContainerStyle="{StaticResource ResourceRow}" AutomationProperties.Name="任务队列">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="240"/><ColumnDefinition Width="80"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" VerticalAlignment="Center">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                              <Setter Property="Foreground" Value="{StaticResource Secondary}"/>
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatusText}" Value="失败"><Setter Property="Foreground" Value="#B42318"/></DataTrigger>
+                                <DataTrigger Binding="{Binding StatusText}" Value="已完成"><Setter Property="Foreground" Value="#26714B"/></DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Message}"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="选择皮肤并加入队列，任务会保存在这里" Foreground="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasJobs}" Value="False"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                </TextBlock>
+              </Grid>
+            </DockPanel>
+          </TabItem>
+          <TabItem Header="运行日志">
+            <TextBox Text="{Binding Log,Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                     FontFamily="Consolas, Microsoft YaHei UI" FontSize="12" BorderThickness="0" Padding="8" AutomationProperties.Name="运行日志"/>
+          </TabItem>
+        </TabControl>
+      </DockPanel>
+    </Border>
+    <DockPanel Grid.Row="6" Margin="0,8,0,0">
+      <TextBlock DockPanel.Dock="Right" Text="Ctrl+F 搜索皮肤 · Ctrl+O 导入结果" Style="{StaticResource Meta}" Margin="16,0,0,0"/>
+      <TextBlock Text="{Binding Status}" Style="{StaticResource Meta}" TextTrimming="CharacterEllipsis"/>
+    </DockPanel>
+    <Border x:Name="SettingsPage" Grid.Row="3" Grid.RowSpan="3" Panel.ZIndex="10"
+            Background="White" BorderBrush="{StaticResource Hairline}" BorderThickness="1"
+            CornerRadius="8" Padding="24"
+            KeyboardNavigation.TabNavigation="Cycle"
+            Visibility="{Binding IsExpanded,ElementName=SettingsExpander,Converter={StaticResource VisibleWhenTrue}}">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,24">
+          <StackPanel>
+            <TextBlock Text="路径与提取设置" FontSize="24" FontWeight="Medium"/>
+            <TextBlock Text="配置下次提取使用的路径与资源语言" Foreground="{StaticResource Secondary}" Margin="0,8,0,0"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+            <Button Content="取消读取" Style="{StaticResource QuietButton}" Click="CancelJobs" Visibility="{Binding CanCancel,Converter={StaticResource VisibleWhenTrue}}" Margin="0,0,8,0"/>
+            <Button Content="返回资源库" Style="{StaticResource QuietButton}" Click="CloseSettings" Margin="0,0,8,0"/>
+            <Button Content="保存并返回" Style="{StaticResource Primary}" Click="SaveSettingsAndReturn" IsEnabled="{Binding CanEdit}"/>
+          </StackPanel>
+        </Grid>
+        <TextBlock DockPanel.Dock="Bottom" Text="选择或保存路径不会启动引擎。离线浏览无需配置游戏目录。" Foreground="{StaticResource Muted}" Margin="0,24,0,0"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Grid IsEnabled="{Binding CanEdit}">
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="24"/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="Auto"/><RowDefinition Height="16"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Text="DataTool 引擎" Foreground="{StaticResource Secondary}" Margin="0,0,0,8"/>
+            <DockPanel><Button DockPanel.Dock="Right" Content="选择文件" Click="ChooseEngine" Margin="8,0,0,0"/><TextBox Text="{Binding Settings.EnginePath,UpdateSourceTrigger=PropertyChanged}" Tag="选择 DataTool.exe" ToolTip="{Binding Settings.EnginePath}"/></DockPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="2">
+            <TextBlock Text="游戏安装目录" Foreground="{StaticResource Secondary}" Margin="0,0,0,8"/>
+            <DockPanel><Button DockPanel.Dock="Right" Content="选择目录" Click="ChooseGame" Margin="8,0,0,0"/><TextBox Text="{Binding Settings.GamePath,UpdateSourceTrigger=PropertyChanged}" Tag="仅记录路径，提取时才读取" ToolTip="{Binding Settings.GamePath}"/></DockPanel>
+          </StackPanel>
+          <StackPanel Grid.Row="2">
+            <TextBlock Text="提取输出目录" Foreground="{StaticResource Secondary}" Margin="0,0,0,8"/>
+            <DockPanel><Button DockPanel.Dock="Right" Content="选择目录" Click="ChooseOutput" Margin="8,0,0,0"/><TextBox Text="{Binding Settings.OutputPath,UpdateSourceTrigger=PropertyChanged}" Tag="每个任务使用独立子目录" ToolTip="{Binding Settings.OutputPath}"/></DockPanel>
+          </StackPanel>
+          <StackPanel Grid.Row="2" Grid.Column="2">
+            <TextBlock Text="资源名称与语音语言" Foreground="{StaticResource Secondary}" Margin="0,0,0,8"/>
+            <DockPanel>
+              <ComboBox SelectedValue="{Binding Settings.Language}" SelectedValuePath="Tag" AutomationProperties.Name="资源语言">
+                <ComboBoxItem Content="英语 · enUS" Tag="enUS"/>
+                <ComboBoxItem Content="简体中文 · zhCN" Tag="zhCN"/>
+                <ComboBoxItem Content="繁体中文 · zhTW" Tag="zhTW"/>
+              </ComboBox>
+            </DockPanel>
+          </StackPanel>
+          <DockPanel Grid.Row="4" Grid.ColumnSpan="3">
+            <Button DockPanel.Dock="Right" Content="从游戏刷新目录" Click="RefreshLive" IsEnabled="{Binding CanReadGame}"
+                    ToolTipService.ShowOnDisabled="True" ToolTip="先退出游戏，再勾选允许读取游戏"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <CheckBox Content="允许读取游戏" IsChecked="{Binding LiveEnabled}" AutomationProperties.Name="允许读取游戏"/>
+              <TextBlock Text="每次启动默认关闭；游戏运行时阻止提取" Style="{StaticResource Meta}" Margin="16,0" VerticalAlignment="Center"/>
+            </StackPanel>
+          </DockPanel>
+        </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
   </Grid>
 </Window>

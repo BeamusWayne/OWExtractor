@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Windows;
 using OWExtractor.Core;
 using OWExtractor.DataTool;
 
@@ -18,18 +19,59 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     public ObservableCollection<SkinAsset> VisibleSkins { get; } = [];
     public ObservableCollection<ExportJob> Jobs { get; } = [];
     private HeroAsset? selectedHero;
-    public HeroAsset? SelectedHero { get => selectedHero; set { selectedHero = value; Notify(); RefreshSkins(); Notify(nameof(HeroTitle)); } }
+    public HeroAsset? SelectedHero { get => selectedHero; set { selectedHero = value; Notify(); RefreshSkins(); Notify(nameof(HeroTitle)); Notify(nameof(HeroName)); Notify(nameof(HeroOriginalName)); Notify(nameof(HeroResourceSummary)); } }
+    private SkinAsset? selectedSkin;
+    public SkinAsset? SelectedSkin { get => selectedSkin; set { selectedSkin = value; Notify(); NotifySelection(); } }
+    private ExportJob? selectedJob;
+    public ExportJob? SelectedJob { get => selectedJob; set { selectedJob = value; Notify(); NotifyActions(); } }
+    private int selectedCount;
+    public int SelectedCount { get => selectedCount; set { selectedCount = value; Notify(); Notify(nameof(SelectionSummary)); NotifyActions(); } }
+    private bool existingOnly;
+    public bool ExistingOnly { get => existingOnly; set { existingOnly = value; Notify(); RefreshSkins(); } }
     private string heroSearch = "";
-    public string HeroSearch { get => heroSearch; set { heroSearch = value; Notify(); RefreshHeroes(); } }
+    public string HeroSearch { get => heroSearch; set { heroSearch = value; Notify(); Notify(nameof(HasHeroSearch)); RefreshHeroes(); } }
     private string skinSearch = "";
     public string SkinSearch { get => skinSearch; set { skinSearch = value; Notify(); RefreshSkins(); } }
     private bool liveEnabled;
-    public bool LiveEnabled { get => liveEnabled; set { liveEnabled = value; Notify(); Notify(nameof(CanRun)); Notify(nameof(ModeText)); } }
+    public bool LiveEnabled { get => liveEnabled; set { liveEnabled = value; Notify(); NotifyActions(); Notify(nameof(ModeText)); Notify(nameof(ModeLabel)); Notify(nameof(QueueHint)); } }
     private bool busy;
-    public bool Busy { get => busy; private set { busy = value; Notify(); Notify(nameof(CanEdit)); Notify(nameof(CanRun)); } }
+    public bool Busy { get => busy; private set { busy = value; Notify(); Notify(nameof(CanEdit)); NotifyActions(); } }
     public bool CanEdit => !Busy;
-    public bool CanRun => LiveEnabled && !Busy;
-    public string ModeText => LiveEnabled ? "已允许游戏文件读取 · 启动前仍会检查游戏状态" : "离线模式 · 只浏览既有结果，不启动提取引擎";
+    public bool CanReadGame => LiveEnabled && !Busy;
+    public bool CanRun => CanReadGame && Jobs.Any(j => j.State == JobState.Pending);
+    public bool CanCancel => cancellation is not null;
+    public bool CanAdd => !Busy && HasSkins && SelectedCount > 0;
+    public bool CanSelectAll => VisibleSkins.Count > 0;
+    public bool CanOpenExport => SelectedSkin?.ExportDirectory is { Length: > 0 };
+    public bool CanPreview => SelectedSkin is not null;
+    public bool CanRetry => !Busy && SelectedJob?.State is JobState.Failed or JobState.Cancelled;
+    public bool CanRemove => !Busy && SelectedJob is not null && SelectedJob.State != JobState.Running;
+    public bool CanOpenJob => SelectedJob?.OutputDirectory is { Length: > 0 };
+    public bool CanManageJob => SelectedJob is not null;
+    public bool HasSelectedSkin => SelectedSkin is not null;
+    public bool HasSkins => VisibleSkins.Count > 0;
+    public bool HasHeroes => Heroes.Count > 0;
+    public bool HasHeroSearch => !string.IsNullOrEmpty(HeroSearch);
+    public string EmptyHeroTitle => Settings.Heroes.Count == 0 ? "尚未导入英雄列表" : "没有匹配的英雄";
+    public bool HasJobs => Jobs.Count > 0;
+    public bool HasSkinFilter => !string.IsNullOrEmpty(SkinSearch) || ExistingOnly;
+    private bool compactLayout;
+    public bool CompactLayout { get => compactLayout; set { if (compactLayout == value) return; compactLayout = value; Notify(); Notify(nameof(InspectorWidth)); Notify(nameof(InspectorGap)); Notify(nameof(ShowInspector)); Notify(nameof(QueueHeight)); } }
+    public GridLength InspectorWidth => new(CompactLayout ? 0 : 240);
+    public GridLength InspectorGap => new(CompactLayout ? 0 : 20);
+    public GridLength QueueHeight => new(CompactLayout ? 144 : 224);
+    public bool ShowInspector => !CompactLayout;
+    public string ModeLabel => LiveEnabled ? "游戏读取已启用" : "离线浏览";
+    public string ModeText => LiveEnabled ? "启动前会检查游戏状态，请在整个提取期间保持游戏退出" : "当前使用已导入的资源记录，可浏览旧结果并安排待执行任务";
+    public string QueueHint => LiveEnabled ? "任务按顺序执行，每次使用独立输出目录" : "离线模式只保存队列，退出游戏后可在设置中启用提取";
+    public string HeroName => SelectedHero?.Name ?? "资源库";
+    public string HeroOriginalName => SelectedHero?.SelectorName ?? "导入之前保存的资源，开始浏览";
+    public string HeroResourceSummary => SelectedHero is { } hero ? $"{hero.Skins.Count} 个皮肤记录 · {hero.Skins.Count(s => s.ExportDirectory is not null)} 个已有结果" : "尚未选择英雄";
+    public string HeroCountText => $"{Heroes.Count} / {Settings.Heroes.Count}";
+    public string SelectionSummary => SelectedCount == 0 ? "选择皮肤以加入队列" : $"已选 {SelectedCount} 项";
+    public string QueueSummary => Jobs.Count == 0 ? "暂无任务" : $"{Jobs.Count} 项任务 · {Jobs.Count(j => j.State == JobState.Pending)} 项待执行";
+    public string EmptySkinTitle => HasSkinFilter ? "没有匹配的皮肤" : SelectedHero is null ? "从已有结果开始" : "还没有这个英雄的皮肤记录";
+    public string EmptySkinDescription => HasSkinFilter ? "试试其他名称，或清除筛选条件" : "导入 DataTool 的旧导出目录，或之前保存的皮肤 JSON";
     public string HeroTitle => SelectedHero is null ? "选择英雄" : $"{SelectedHero.Name}  /  {SelectedHero.SelectorName}";
     public string CatalogSummary => $"{Settings.Heroes.Count} 位英雄  ·  {Settings.Heroes.Sum(x => x.Skins.Count)} 个皮肤记录  ·  {Settings.Heroes.Sum(x => x.Skins.Count(s => s.ExportDirectory is not null))} 个已有导出";
     private string status = "准备就绪";
@@ -39,6 +81,12 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     private CancellationTokenSource? cancellation;
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Notify([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
+    private void NotifyActions()
+    {
+        foreach (var name in new[] { nameof(CanReadGame), nameof(CanRun), nameof(CanCancel), nameof(CanAdd), nameof(CanSelectAll), nameof(CanOpenExport), nameof(CanPreview), nameof(CanRetry), nameof(CanRemove), nameof(CanOpenJob), nameof(CanManageJob) }) Notify(name);
+    }
+    private void NotifySelection() { Notify(nameof(HasSelectedSkin)); NotifyActions(); }
+    private void NotifyJobs() { Notify(nameof(QueueSummary)); Notify(nameof(HasJobs)); NotifyActions(); }
 
     public async Task InitializeAsync()
     {
@@ -53,6 +101,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
         AddLog("已进入离线模式。此模式不会启动 DataTool，也不会读取游戏安装目录。");
         Status = Settings.Heroes.Count == 0 ? "导入已有英雄 JSON 或已提取目录，开始离线浏览。" : "已载入本地目录缓存。";
         Notify(nameof(Settings));
+        NotifyJobs();
     }
 
     public void RefreshHeroes()
@@ -60,14 +109,18 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
         var prior = SelectedHero;
         Heroes.Clear();
         foreach (var h in Settings.Heroes.Where(x => Matches(x.Name, HeroSearch) || Matches(x.SelectorName, HeroSearch)).OrderByDescending(h => h.Skins.Any(s => s.ExportDirectory is not null)).ThenBy(h => h.Name)) Heroes.Add(h);
-        if (prior is null || !Heroes.Contains(prior)) SelectedHero = Heroes.FirstOrDefault();
+        SelectedHero = Heroes.FirstOrDefault(h => h.Guid == prior?.Guid) ?? Heroes.FirstOrDefault();
         Notify(nameof(CatalogSummary));
+        Notify(nameof(HeroCountText)); Notify(nameof(HasHeroes)); Notify(nameof(EmptyHeroTitle));
     }
     private static bool Matches(string text, string query) => text.Contains(query, StringComparison.OrdinalIgnoreCase);
     private void RefreshSkins()
     {
+        var prior = SelectedSkin;
         VisibleSkins.Clear();
-        foreach (var skin in (SelectedHero?.Skins ?? []).Where(x => Matches(x.Name, SkinSearch) || Matches(x.SelectorName, SkinSearch)).OrderByDescending(x => x.ExportDirectory is not null).ThenBy(x => x.Name)) VisibleSkins.Add(skin);
+        foreach (var skin in (SelectedHero?.Skins ?? []).Where(x => (Matches(x.Name, SkinSearch) || Matches(x.SelectorName, SkinSearch)) && (!ExistingOnly || x.ExportDirectory is not null)).OrderByDescending(x => x.ExportDirectory is not null).ThenBy(x => x.Name)) VisibleSkins.Add(skin);
+        SelectedSkin = VisibleSkins.FirstOrDefault(s => s == prior) ?? VisibleSkins.FirstOrDefault();
+        Notify(nameof(HasSkins)); Notify(nameof(HasSkinFilter)); Notify(nameof(EmptySkinTitle)); Notify(nameof(EmptySkinDescription)); NotifyActions();
     }
     public async Task ImportHeroesAsync(string file, bool localized)
     {
@@ -110,7 +163,8 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
             if (Jobs.Any(j => j.HeroSelector == SelectedHero.SelectorName && j.SkinSelector == skin.SelectorName && j.State is JobState.Pending or JobState.Running)) continue;
             Jobs.Add(new ExportJob { HeroName = SelectedHero.Name, HeroSelector = SelectedHero.SelectorName, SkinName = skin.Name, SkinSelector = skin.SelectorName }); count++;
         }
-        await SaveAsync(); Status = $"已加入 {count} 个任务。" + (LiveEnabled ? "" : "离线模式下只记录队列，不执行提取。");
+        NotifyJobs();
+        await SaveAsync(); Status = count == 0 ? "所选皮肤已在待执行队列中" : $"已加入 {count} 个任务" + (LiveEnabled ? "" : " · 离线模式下不执行提取");
         AddLog(Status);
     }
     public string Preview(SkinAsset skin)
@@ -122,7 +176,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     public async Task RefreshLiveAsync()
     {
         var gate = new LiveAccessGate(() => LiveEnabled); gate.EnsureAllowed();
-        EnsurePaths(); Busy = true; cancellation = new();
+        EnsurePaths(); cancellation = new(); Busy = true;
         try
         {
             var cacheDir = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(profile))!, "catalog", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N")[..6]);
@@ -145,7 +199,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     public async Task RunJobsAsync()
     {
         var gate = new LiveAccessGate(() => LiveEnabled); gate.EnsureAllowed(); EnsurePaths();
-        Busy = true; cancellation = new();
+        cancellation = new(); Busy = true;
         try
         {
             foreach (var job in Jobs.Where(j => j.State == JobState.Pending).ToList())
@@ -186,8 +240,8 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
         if (job is null || job.State is JobState.Running or JobState.Succeeded) return;
         job.State = JobState.Pending; job.Message = "等待重试"; RefreshJobs(); await SaveAsync();
     }
-    public async Task RemoveAsync(ExportJob? job) { if (job is null || job.State == JobState.Running) return; Jobs.Remove(job); await SaveAsync(); }
-    private void RefreshJobs() => System.Windows.Data.CollectionViewSource.GetDefaultView(Jobs).Refresh();
+    public async Task RemoveAsync(ExportJob? job) { if (job is null || job.State == JobState.Running) return; Jobs.Remove(job); NotifyJobs(); await SaveAsync(); }
+    private void RefreshJobs() { System.Windows.Data.CollectionViewSource.GetDefaultView(Jobs).Refresh(); NotifyJobs(); }
     public void Cancel() => cancellation?.Cancel();
     private void EngineLog(string line) => System.Windows.Application.Current.Dispatcher.InvokeAsync(() => AddLog(line));
     public void AddLog(string line)

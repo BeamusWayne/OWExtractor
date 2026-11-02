@@ -23,6 +23,8 @@ public sealed class SkinAsset
     public int ModelCount { get; set; }
     public long Bytes { get; set; }
     [JsonIgnore] public string State => ExportDirectory is null ? "目录记录" : "已有导出";
+    [JsonIgnore] public string LocalFileSummary => ExportDirectory is null ? "尚无本地文件" : $"{FileCount:N0} 个文件 · {Bytes / 1048576d:N1} MB";
+    [JsonIgnore] public string SizeLabel => $"{Bytes / 1048576d:N1} MB";
     [JsonIgnore] public string Details => ExportDirectory is null ? "尚无本地导出记录" : $"{ModelCount} 个模型 · {FileCount:N0} 个文件 · {Bytes / 1048576d:N1} MB";
 }
 

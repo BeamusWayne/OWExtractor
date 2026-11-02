@@ -43,21 +43,28 @@ public partial class App : Application
             if (render is not null)
             {
                 // Render WPF content off-screen: no native window, focus change, game read, or DataTool launch.
-                window.Width = 1360; window.Height = 960;
+                var width = int.TryParse(Option("--render-width"), out var w) ? Math.Clamp(w, 1080, 2560) : 1360;
+                var height = int.TryParse(Option("--render-height"), out var h) ? Math.Clamp(h, 720, 1600) : 960;
+                window.Width = width; window.Height = height;
+                vm.CompactLayout = height < 840 || width < 1200;
                 var content = (FrameworkElement)window.Content;
-                content.Measure(new Size(1360, 960)); content.Arrange(new Rect(0, 0, 1360, 960)); content.UpdateLayout();
-                var bitmap = new RenderTargetBitmap(1360, 960, 96, 96, PixelFormats.Pbgra32);
+                content.Measure(new Size(width, height)); content.Arrange(new Rect(0, 0, width, height)); content.UpdateLayout();
+                if (verifiedWorkflow) { window.VerifyOfflineView(); content.UpdateLayout(); }
+                if (e.Args.Contains("--render-settings")) { window.SettingsExpander.IsExpanded = true; content.Measure(new Size(width, height)); content.Arrange(new Rect(0, 0, width, height)); content.UpdateLayout(); }
+                var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
                 var background = new DrawingVisual();
-                using (var context = background.RenderOpen()) context.DrawRectangle(new SolidColorBrush(Color.FromRgb(243, 245, 248)), null, new Rect(0, 0, 1360, 960));
+                using (var context = background.RenderOpen()) context.DrawRectangle(new SolidColorBrush(Color.FromRgb(245, 246, 247)), null, new Rect(0, 0, width, height));
                 bitmap.Render(background);
                 bitmap.Render(content);
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(render))!);
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 using (var file = File.Create(render)) encoder.Save(file);
-                await File.WriteAllTextAsync(render + ".json", JsonSerializer.Serialize(new { heroes = vm.Heroes.Count, skins = vm.VisibleSkins.Count, pendingJobs = vm.Jobs.Count, offline = !vm.LiveEnabled, engineStarted = OWExtractor.DataTool.EngineRunner.StartedProcessCount != 0, verifiedWorkflow }));
+                await File.WriteAllTextAsync(render + ".json", JsonSerializer.Serialize(new { heroes = vm.Heroes.Count, skins = vm.VisibleSkins.Count, pendingJobs = vm.Jobs.Count, offline = !vm.LiveEnabled, engineStarted = OWExtractor.DataTool.EngineRunner.StartedProcessCount != 0, verifiedWorkflow, width, height }));
                 Shutdown(0); return;
             }
             ShutdownMode = ShutdownMode.OnMainWindowClose;
+            window.Width = Math.Max(window.MinWidth, Math.Min(window.Width, SystemParameters.WorkArea.Width));
+            window.Height = Math.Max(window.MinHeight, Math.Min(window.Height, SystemParameters.WorkArea.Height));
             window.Show();
         }
         catch (Exception ex)

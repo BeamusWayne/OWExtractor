@@ -30,7 +30,9 @@ jobs:
         run: dotnet run --project tests/OWExtractor.Tests -c Release --no-build -- --report test-results.json
       - name: Off-screen UI checks
         shell: pwsh
-        run: ./scripts/smoke-ui.ps1 -Executable ./src/OWExtractor.App/bin/Release/net10.0-windows/OWExtractor.exe -OutputDirectory ./artifacts/checks
+        run: |
+          ./scripts/smoke-ui.ps1 -Executable ./src/OWExtractor.App/bin/Release/net10.0-windows/OWExtractor.exe -OutputDirectory ./artifacts/checks
+          ./scripts/smoke-ui.ps1 -Executable ./src/OWExtractor.App/bin/Release/net10.0-windows/OWExtractor.exe -OutputDirectory ./artifacts/checks/compact -RenderWidth 1080 -RenderHeight 720
       - name: Publish self-contained Windows package
         run: dotnet publish src/OWExtractor.App -c Release -r win-x64 --self-contained true -o artifacts/win-x64 -m:1
       - name: Package
