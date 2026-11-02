@@ -1,0 +1,60 @@
+name: Windows build and checks
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build
+        run: dotnet build OWExtractor.slnx -c Release -m:1
+      - name: Core checks with synthetic data
+        run: dotnet run --project tests/OWExtractor.Tests -c Release --no-build -- --report test-results.json
+      - name: Off-screen UI checks
+        shell: pwsh
+        run: ./scripts/smoke-ui.ps1 -Executable ./src/OWExtractor.App/bin/Release/net10.0-windows/OWExtractor.exe -OutputDirectory ./artifacts/checks
+      - name: Publish self-contained Windows package
+        run: dotnet publish src/OWExtractor.App -c Release -r win-x64 --self-contained true -o artifacts/win-x64 -m:1
+      - name: Package
+        shell: pwsh
+        run: |
+          Copy-Item -LiteralPath LICENSE,THIRD_PARTY_NOTICES.md,README.md -Destination artifacts/win-x64
+          Copy-Item -LiteralPath docs -Destination artifacts/win-x64/docs -Recurse
+          Compress-Archive -Path artifacts/win-x64/* -DestinationPath artifacts/OWExtractor-win-x64.zip
+          (Get-FileHash artifacts/OWExtractor-win-x64.zip -Algorithm SHA256).Hash | Set-Content artifacts/OWExtractor-win-x64.zip.sha256
+      - uses: actions/upload-artifact@v7
+        with:
+          name: OWExtractor-win-x64
+          path: |
+            artifacts/OWExtractor-win-x64.zip
+            artifacts/OWExtractor-win-x64.zip.sha256
+            artifacts/checks/*
+            test-results.json
+          retention-days: 14
+      - name: Publish preview
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$env:RELEASE_TAG" --prerelease --title "OWExtractor $env:RELEASE_TAG" --notes "中文客户端开发预览。已验证离线流程；真实提取与当前游戏版本兼容性尚待验收。详见 README。" artifacts/OWExtractor-win-x64.zip artifacts/OWExtractor-win-x64.zip.sha256

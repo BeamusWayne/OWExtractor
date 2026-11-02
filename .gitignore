@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+artifacts/
+work/
+*.local.json
+*.user
+*.log
+*.zip
+*.blend
+*.owmdl
+*.owmat
+*.owentity
+*.owanim*
+DataTool.exe
+DataTool.dll

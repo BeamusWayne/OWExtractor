@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OWExtractor.App/OWExtractor.App.csproj" />
+    <Project Path="src/OWExtractor.Core/OWExtractor.Core.csproj" />
+    <Project Path="src/OWExtractor.DataTool/OWExtractor.DataTool.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OWExtractor.Tests/OWExtractor.Tests.csproj" />
+  </Folder>
+</Solution>
