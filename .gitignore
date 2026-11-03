@@ -5,6 +5,9 @@
 artifacts/
 work/
 *.local.json
+*.jobs.json
+test-results.json
+*.pdb
 *.user
 *.log
 *.zip

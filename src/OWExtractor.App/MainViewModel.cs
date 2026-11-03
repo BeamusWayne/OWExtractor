@@ -10,7 +10,7 @@ using OWExtractor.DataTool;
 
 namespace OWExtractor.App;
 
-public sealed class MainViewModel(string profile) : INotifyPropertyChanged
+public sealed partial class MainViewModel(string profile) : INotifyPropertyChanged
 {
     private readonly SettingsStore store = new(profile);
     private readonly string jobPath = profile + ".jobs.json";
@@ -21,11 +21,11 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     private HeroAsset? selectedHero;
     public HeroAsset? SelectedHero { get => selectedHero; set { selectedHero = value; Notify(); RefreshSkins(); Notify(nameof(HeroTitle)); Notify(nameof(HeroName)); Notify(nameof(HeroOriginalName)); Notify(nameof(HeroResourceSummary)); } }
     private SkinAsset? selectedSkin;
-    public SkinAsset? SelectedSkin { get => selectedSkin; set { selectedSkin = value; Notify(); NotifySelection(); } }
+    public SkinAsset? SelectedSkin { get => selectedSkin; set { selectedSkin = value; Notify(); RefreshLibrarySelection(); NotifySelection(); } }
     private ExportJob? selectedJob;
     public ExportJob? SelectedJob { get => selectedJob; set { selectedJob = value; Notify(); NotifyActions(); } }
     private int selectedCount;
-    public int SelectedCount { get => selectedCount; set { selectedCount = value; Notify(); Notify(nameof(SelectionSummary)); NotifyActions(); } }
+    public int SelectedCount { get => selectedCount; set { selectedCount = value; Notify(); Notify(nameof(SelectionSummary)); Notify(nameof(SelectedContentSummary)); NotifyActions(); } }
     private bool existingOnly;
     public bool ExistingOnly { get => existingOnly; set { existingOnly = value; Notify(); RefreshSkins(); } }
     private string heroSearch = "";
@@ -33,9 +33,9 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     private string skinSearch = "";
     public string SkinSearch { get => skinSearch; set { skinSearch = value; Notify(); RefreshSkins(); } }
     private bool liveEnabled;
-    public bool LiveEnabled { get => liveEnabled; set { liveEnabled = value; Notify(); NotifyActions(); Notify(nameof(ModeText)); Notify(nameof(ModeLabel)); Notify(nameof(QueueHint)); } }
+    public bool LiveEnabled { get => liveEnabled; set { liveEnabled = value && !OfflineLocked; Notify(); NotifyActions(); Notify(nameof(ModeText)); Notify(nameof(ModeLabel)); Notify(nameof(QueueHint)); Notify(nameof(QueueActionHint)); } }
     private bool busy;
-    public bool Busy { get => busy; private set { busy = value; Notify(); Notify(nameof(CanEdit)); NotifyActions(); } }
+    public bool Busy { get => busy; private set { busy = value; Notify(); Notify(nameof(CanEdit)); Notify(nameof(CanToggleLive)); NotifyActions(); } }
     public bool CanEdit => !Busy;
     public bool CanReadGame => LiveEnabled && !Busy;
     public bool CanRun => CanReadGame && Jobs.Any(j => j.State == JobState.Pending);
@@ -56,11 +56,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     public bool HasJobs => Jobs.Count > 0;
     public bool HasSkinFilter => !string.IsNullOrEmpty(SkinSearch) || ExistingOnly;
     private bool compactLayout;
-    public bool CompactLayout { get => compactLayout; set { if (compactLayout == value) return; compactLayout = value; Notify(); Notify(nameof(InspectorWidth)); Notify(nameof(InspectorGap)); Notify(nameof(ShowInspector)); Notify(nameof(QueueHeight)); } }
-    public GridLength InspectorWidth => new(CompactLayout ? 0 : 240);
-    public GridLength InspectorGap => new(CompactLayout ? 0 : 20);
-    public GridLength QueueHeight => new(CompactLayout ? 144 : 224);
-    public bool ShowInspector => !CompactLayout;
+    public bool CompactLayout { get => compactLayout; set { if (compactLayout == value) return; compactLayout = value; Notify(); Notify(nameof(PreviewHeight)); } }
     public string ModeLabel => LiveEnabled ? "游戏读取已启用" : "离线浏览";
     public string ModeText => LiveEnabled ? "启动前会检查游戏状态，请在整个提取期间保持游戏退出" : "当前使用已导入的资源记录，可浏览旧结果并安排待执行任务";
     public string QueueHint => LiveEnabled ? "任务按顺序执行，每次使用独立输出目录" : "离线模式只保存队列，退出游戏后可在设置中启用提取";
@@ -86,10 +82,12 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
         foreach (var name in new[] { nameof(CanReadGame), nameof(CanRun), nameof(CanCancel), nameof(CanAdd), nameof(CanSelectAll), nameof(CanOpenExport), nameof(CanPreview), nameof(CanRetry), nameof(CanRemove), nameof(CanOpenJob), nameof(CanManageJob) }) Notify(name);
     }
     private void NotifySelection() { Notify(nameof(HasSelectedSkin)); NotifyActions(); }
-    private void NotifyJobs() { Notify(nameof(QueueSummary)); Notify(nameof(HasJobs)); NotifyActions(); }
+    private void NotifyJobs() { Notify(nameof(QueueSummary)); Notify(nameof(HasJobs)); Notify(nameof(QueueCount)); NotifyActions(); }
 
     public async Task InitializeAsync()
     {
+        Camera.Changed -= PreviewCameraChanged;
+        Camera.Changed += PreviewCameraChanged;
         Settings = await store.LoadAsync();
         if (File.Exists(jobPath))
         {
@@ -101,6 +99,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
         AddLog("已进入离线模式。此模式不会启动 DataTool，也不会读取游戏安装目录。");
         Status = Settings.Heroes.Count == 0 ? "导入已有英雄 JSON 或已提取目录，开始离线浏览。" : "已载入本地目录缓存。";
         Notify(nameof(Settings));
+        RefreshAudioRows();
         NotifyJobs();
     }
 
@@ -112,6 +111,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
         SelectedHero = Heroes.FirstOrDefault(h => h.Guid == prior?.Guid) ?? Heroes.FirstOrDefault();
         Notify(nameof(CatalogSummary));
         Notify(nameof(HeroCountText)); Notify(nameof(HasHeroes)); Notify(nameof(EmptyHeroTitle));
+        RefreshLibraryCards();
     }
     private static bool Matches(string text, string query) => text.Contains(query, StringComparison.OrdinalIgnoreCase);
     private void RefreshSkins()
@@ -124,6 +124,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     }
     public async Task ImportHeroesAsync(string file, bool localized)
     {
+        LibraryPreview.EnsureMetadataAllowed(file, Settings.GamePath);
         var json = await File.ReadAllTextAsync(file);
         if (localized) CatalogService.ApplyLocalizedNames(Settings.Heroes, json);
         else Settings.Heroes = CatalogService.ParseHeroes(json, Settings.Heroes);
@@ -133,6 +134,7 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
     }
     public async Task ImportUnlocksAsync(string file)
     {
+        LibraryPreview.EnsureMetadataAllowed(file, Settings.GamePath);
         var count = CatalogService.ImportUnlocks(Settings.Heroes, await File.ReadAllTextAsync(file));
         RefreshHeroes(); RefreshSkins(); await SaveAsync(); Status = $"已导入 {count} 个皮肤记录。"; AddLog(Status);
     }
@@ -160,8 +162,10 @@ public sealed class MainViewModel(string profile) : INotifyPropertyChanged
         var count = 0;
         foreach (var skin in selected)
         {
-            if (Jobs.Any(j => j.HeroSelector == SelectedHero.SelectorName && j.SkinSelector == skin.SelectorName && j.State is JobState.Pending or JobState.Running)) continue;
-            Jobs.Add(new ExportJob { HeroName = SelectedHero.Name, HeroSelector = SelectedHero.SelectorName, SkinName = skin.Name, SkinSelector = skin.SelectorName }); count++;
+            if (Jobs.Any(j => j.HeroSelector == SelectedHero.SelectorName && j.SkinSelector == skin.SelectorName && (j.State is JobState.Pending or JobState.Running)
+                && j.IncludeTextures == IncludeTextures && j.IncludeAnimations == IncludeAnimations && j.IncludeSound == IncludeSound)) continue;
+            Jobs.Add(new ExportJob { HeroName = SelectedHero.Name, HeroSelector = SelectedHero.SelectorName, SkinName = skin.Name, SkinSelector = skin.SelectorName,
+                IncludeTextures = IncludeTextures, IncludeAnimations = IncludeAnimations, IncludeSound = IncludeSound }); count++;
         }
         NotifyJobs();
         await SaveAsync(); Status = count == 0 ? "所选皮肤已在待执行队列中" : $"已加入 {count} 个任务" + (LiveEnabled ? "" : " · 离线模式下不执行提取");

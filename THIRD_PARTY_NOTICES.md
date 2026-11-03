@@ -2,6 +2,17 @@
 
 OWExtractor 是独立开发的客户端，通过命令行调用用户自行准备的 DataTool。当前仓库及客户端包没有嵌入 OWLib、TACTLib、TankLib 或 Blender 插件的实现或二进制文件。
 
+## 随便携包分发的 .NET / Windows Desktop 运行时
+
+Windows x64 自包含包包含 Microsoft.NETCore.App 和 Microsoft.WindowsDesktop.App，版权归 .NET Foundation and Contributors 及其各自第三方作者所有。
+
+- 项目：[dotnet/runtime](https://github.com/dotnet/runtime)、[dotnet/wpf](https://github.com/dotnet/wpf)、[dotnet/winforms](https://github.com/dotnet/winforms)。
+- 运行时主体采用 MIT 许可证，部分第三方组件另有许可说明。
+- 每个发布包的 `licenses/` 目录包含对应 NuGet 运行时包的许可证、.NET 第三方说明，以及对应版本的 WPF 和 Windows Forms 第三方说明。
+- `licenses/runtime-manifest.json` 记录实际运行时版本、说明文件来源与 SHA-256；不包含构建机器上的路径。
+
+这些文件由发布脚本按 `OWExtractor.runtimeconfig.json` 中的实际版本收集。说明缺失时打包失败，不以本项目的 MIT 声明替代运行时声明。
+
 ## OWLib / DataTool
 
 - 项目：https://github.com/overtools/OWLib
@@ -14,12 +25,14 @@ OWExtractor 是独立开发的客户端，通过命令行调用用户自行准�
 ## io_scene_owm
 
 - 项目：https://github.com/overtools/io_scene_owm
-- 用途：由用户单独安装的 Blender 导入插件。
-- 许可证以插件仓库及实际下载版本为准；本项目不包含插件代码。
+- 许可证：[GNU GPL v3.0](https://github.com/overtools/io_scene_owm/blob/a13b4483ec1c0d42556b22a9ee61ffe68eae979f/LICENSE)。
+- 用途：由用户单独安装的 Blender 导入插件；开发离线预览时也参考了其对导出格式、材质标识和 UV 语义的解释。
+- 本项目的 C# 二进制读取、WPF 材质近似、透明边缘裁切和轻量网格在本仓库实现，不打包或调用插件，不移植其 Blender 节点、骨骼或动画实现。
+- 格式依据、参考文件及实现范围见 [离线预览的格式与来源说明](docs/format-references.md)。本项目的 MIT 许可证不改变上游插件的 GPL 许可证。
 
 ## 游戏内容
 
-游戏资源不属于本项目软件许可证的授权范围。仓库及便携包不包含提取的游戏模型、贴图或音频。文档界面截图展示的是客户端与本地资源条目信息。
+游戏资源不属于本项目软件许可证的授权范围。仓库及便携包不包含提取的游戏模型、贴图或音频。随仓库和发布包提供的界面截图使用合成测试模型与条目。
 
 ## unslop 设计方法参考
 

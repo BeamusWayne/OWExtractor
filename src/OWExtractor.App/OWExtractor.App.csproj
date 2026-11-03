@@ -5,8 +5,11 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>OWExtractor</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/OWExtractor.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets/OWExtractor.ico" />
+    <Resource Include="Assets/OWExtractor.png" />
     <ProjectReference Include="../OWExtractor.Core/OWExtractor.Core.csproj" />
     <ProjectReference Include="../OWExtractor.DataTool/OWExtractor.DataTool.csproj" />
   </ItemGroup>
