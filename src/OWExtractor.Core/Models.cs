@@ -22,6 +22,10 @@ public sealed class SkinAsset
     public int FileCount { get; set; }
     public int ModelCount { get; set; }
     public long Bytes { get; set; }
+    public string? PreviewFrontPath { get; set; }
+    public string? PreviewBackPath { get; set; }
+    public string? PreviewModelPath { get; set; }
+    public Dictionary<string, int> ExtensionCounts { get; set; } = [];
     [JsonIgnore] public string State => ExportDirectory is null ? "目录记录" : "已有导出";
     [JsonIgnore] public string LocalFileSummary => ExportDirectory is null ? "尚无本地文件" : $"{FileCount:N0} 个文件 · {Bytes / 1048576d:N1} MB";
     [JsonIgnore] public string SizeLabel => $"{Bytes / 1048576d:N1} MB";
@@ -36,7 +40,11 @@ public sealed class AppSettings
     public string Language { get; set; } = "enUS";
     public string EngineVersion { get; set; } = "未验证";
     public string GameVersion { get; set; } = "未知";
+    public string PreviewRenderingMode { get; set; } = "software";
+    public int PreviewTargetFps { get; set; } = 30;
+    public bool ShowPreviewPerformance { get; set; }
     public List<HeroAsset> Heroes { get; set; } = [];
+    public List<CachedAudioSummary> AudioSummaries { get; set; } = [];
 }
 
 public sealed class SettingsStore(string path)
@@ -67,6 +75,10 @@ public sealed class ExportJob
     public string OutputDirectory { get; set; } = "";
     public JobState State { get; set; }
     public string Message { get; set; } = "等待执行";
+    public bool IncludeTextures { get; set; } = true;
+    public bool IncludeAnimations { get; set; } = true;
+    public bool IncludeSound { get; set; } = true;
+    [JsonIgnore] public string ContentSummary => "模型与材质" + (IncludeTextures ? " · 贴图" : "") + (IncludeAnimations ? " · 动画" : "") + (IncludeSound ? " · 音效" : "");
     [JsonIgnore] public string Title => $"{HeroName} / {SkinName}";
     [JsonIgnore] public string StatusText => State switch {
         JobState.Pending => "待执行", JobState.Running => "提取中", JobState.Succeeded => "已完成",

@@ -92,12 +92,14 @@ public static class CatalogService
                 var skin = hero.Skins.FirstOrDefault(s => s.SelectorName == name);
                 if (skin is null) { skin = new SkinAsset { Key = "export:" + name, Name = name, SelectorName = name }; hero.Skins.Add(skin); }
                 skin.ExportDirectory = Path.GetFullPath(skinDir);
-                skin.FileCount = 0; skin.ModelCount = 0; skin.Bytes = 0;
+                skin.FileCount = 0; skin.ModelCount = 0; skin.Bytes = 0; skin.ExtensionCounts.Clear();
                 foreach (var file in Directory.EnumerateFiles(skinDir, "*", recursive))
                 {
                     token.ThrowIfCancellationRequested();
                     if (++skin.FileCount > 200000) throw new InvalidDataException("单个皮肤文件数超过导入上限，请缩小目录范围。");
                     var info = new FileInfo(file); skin.Bytes += info.Length;
+                    var extension = info.Extension.ToLowerInvariant();
+                    skin.ExtensionCounts[extension] = skin.ExtensionCounts.GetValueOrDefault(extension) + 1;
                     if (info.Extension.Equals(".owmdl", StringComparison.OrdinalIgnoreCase)) skin.ModelCount++;
                 }
                 count++;

@@ -26,6 +26,15 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build
         run: dotnet build OWExtractor.slnx -c Release -m:1
+      - name: Validate release metadata
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $version=([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
+          if($env:RELEASE_TAG -notmatch ('^v'+[regex]::Escape($version)+'-preview\.\d+$')){throw 'Release tag must match the project version and preview suffix.'}
+          if(-not (Test-Path -LiteralPath ('docs/releases/'+$env:RELEASE_TAG+'.md'))){throw 'Versioned release notes are missing.'}
       - name: Core checks with synthetic data
         run: dotnet run --project tests/OWExtractor.Tests -c Release --no-build -- --report test-results.json
       - name: Off-screen UI checks
@@ -33,22 +42,23 @@ jobs:
         run: |
           ./scripts/smoke-ui.ps1 -Executable ./src/OWExtractor.App/bin/Release/net10.0-windows/OWExtractor.exe -OutputDirectory ./artifacts/checks
           ./scripts/smoke-ui.ps1 -Executable ./src/OWExtractor.App/bin/Release/net10.0-windows/OWExtractor.exe -OutputDirectory ./artifacts/checks/compact -RenderWidth 1080 -RenderHeight 720
+          ./scripts/smoke-ui.ps1 -Executable ./src/OWExtractor.App/bin/Release/net10.0-windows/OWExtractor.exe -OutputDirectory ./artifacts/checks/export-dpi -RenderWidth 1080 -RenderHeight 760 -RenderDpi 144 -ExportOptions
       - name: Publish self-contained Windows package
         run: dotnet publish src/OWExtractor.App -c Release -r win-x64 --self-contained true -o artifacts/win-x64 -m:1
+      - name: Check packaged executable
+        shell: pwsh
+        run: ./scripts/smoke-ui.ps1 -Executable ./artifacts/win-x64/OWExtractor.exe -OutputDirectory ./artifacts/checks/packaged
       - name: Package
         shell: pwsh
         run: |
-          Copy-Item -LiteralPath LICENSE,THIRD_PARTY_NOTICES.md,README.md -Destination artifacts/win-x64
-          Copy-Item -LiteralPath docs -Destination artifacts/win-x64/docs -Recurse
-          Compress-Archive -Path artifacts/win-x64/* -DestinationPath artifacts/OWExtractor-win-x64.zip
-          (Get-FileHash artifacts/OWExtractor-win-x64.zip -Algorithm SHA256).Hash | Set-Content artifacts/OWExtractor-win-x64.zip.sha256
+          ./scripts/package-release.ps1 -PublishDirectory ./artifacts/win-x64 -ZipPath ./artifacts/OWExtractor-win-x64.zip
       - uses: actions/upload-artifact@v7
         with:
           name: OWExtractor-win-x64
           path: |
             artifacts/OWExtractor-win-x64.zip
             artifacts/OWExtractor-win-x64.zip.sha256
-            artifacts/checks/*
+            artifacts/checks/**
             test-results.json
           retention-days: 14
       - name: Publish preview
@@ -59,4 +69,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$env:RELEASE_TAG" --prerelease --title "OWExtractor $env:RELEASE_TAG" --notes "中文客户端开发预览。已验证离线流程；真实提取与当前游戏版本兼容性尚待验收。详见 README。" artifacts/OWExtractor-win-x64.zip artifacts/OWExtractor-win-x64.zip.sha256
+          gh release create "$env:RELEASE_TAG" --verify-tag --prerelease --title "OWExtractor $env:RELEASE_TAG" --notes-file "docs/releases/$env:RELEASE_TAG.md" artifacts/OWExtractor-win-x64.zip artifacts/OWExtractor-win-x64.zip.sha256

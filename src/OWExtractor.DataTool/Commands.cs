@@ -34,6 +34,9 @@ public static class Commands
         var args = new List<string> { settings.GamePath, "extract-unlocks", job.OutputDirectory, $"{job.HeroSelector}|skin={job.SkinSelector}" };
         AddFlags(settings, args);
         args.Add("--no-parallel");
+        if (!job.IncludeTextures) args.Add("--skip-textures");
+        if (!job.IncludeAnimations) { args.Add("--skip-animations"); args.Add("--skip-animation-effects"); }
+        if (!job.IncludeSound) args.Add("--skip-sound");
         return new(settings.EnginePath, args);
     }
 
